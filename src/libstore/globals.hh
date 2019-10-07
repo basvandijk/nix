@@ -205,6 +205,9 @@ public:
         "Whether to enable sandboxed builds. Can be \"true\", \"false\" or \"relaxed\".",
         {"build-use-chroot", "build-use-sandbox"}};
 
+    Setting<bool> allowAllowNetworking{this, false, "allow-allow-networking",
+        "Allow `__allowNetworking = true` in derivations to allow network access even for non fixed output derivations."};
+
     Setting<PathSet> sandboxPaths{this, {}, "sandbox-paths",
         "The paths to make available inside the build sandbox.",
         {"build-chroot-dirs", "build-sandbox-paths"}};

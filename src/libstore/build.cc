@@ -834,6 +834,8 @@ private:
 
     Path chrootRootDir;
 
+    bool allowNetworking = false;
+
     /* RAII object to delete the chroot directory. */
     std::shared_ptr<AutoDelete> autoDelChroot;
 
@@ -1932,6 +1934,12 @@ void DerivationGoal::startBuilder()
             useChroot = !fixedOutput && !noChroot;
     }
 
+    allowNetworking = parsedDrv->getBoolAttr("__allowNetworking");
+    if (!settings.allowAllowNetworking && allowNetworking) {
+        throw Error(format("derivation '%1%' has '__allowNetworking' set, "
+            "but that's only allowed when 'allow-allow-networking' is 'true'") % drvPath);
+    }
+
     if (worker.store.storeDir != worker.store.realStoreDir) {
         #if __linux__
             useChroot = true;
@@ -2327,7 +2335,7 @@ void DerivationGoal::startBuilder()
            us.
         */
 
-        if (!fixedOutput)
+        if (!fixedOutput && !allowNetworking)
             privateNetwork = true;
 
         userNamespaceSync.create();
@@ -3033,7 +3041,7 @@ void DerivationGoal::runChild()
 
                 sandboxProfile += "(import \"sandbox-defaults.sb\")\n";
 
-                if (fixedOutput)
+                if (fixedOutput || allowNetworking)
                     sandboxProfile += "(import \"sandbox-network.sb\")\n";
 
                 /* Our rwx outputs */
@@ -3080,8 +3088,12 @@ void DerivationGoal::runChild()
                 sandboxProfile += ")\n";
 
                 sandboxProfile += additionalSandboxProfile;
-            } else
+            } else {
                 sandboxProfile += "(import \"sandbox-minimal.sb\")\n";
+                if (allowNetworking) {
+                    sandboxProfile += "(import \"sandbox-network.sb\")\n";
+                }
+            }
 
             debug("Generated sandbox profile:");
             debug(sandboxProfile);
